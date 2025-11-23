@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taekwondo Mastery Quiz</title>
+    <!-- Use Tailwind CSS for modern, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue/gray background */
+        }
+        .tkd-blue {
+            background-color: #007bff; /* Deep Blue, like a Dan belt trim */
+        }
+        .tkd-red {
+            background-color: #dc3545; /* Red for urgency/poomsae */
+        }
+        .tkd-pass {
+            background-color: #28a745; /* Green for success */
+        }
+        .tkd-fail {
+            background-color: #ffc107; /* Yellow for review */
+        }
+        .option-button {
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .option-button:hover:not(.disabled) {
+            background-color: #e2e8f0;
+        }
+        .option-button.correct {
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            font-weight: 700;
+        }
+        .option-button.incorrect {
+            background-color: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+            font-weight: 700;
+        }
+        .option-button.disabled {
+            pointer-events: none;
+        }
+        .feedback.correct {
+            color: #155724;
+            background-color: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+        .feedback.incorrect {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-left: 5px solid #dc3545;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 flex justify-center items-center min-h-screen">
+
+    <main id="app-container" class="bg-white p-6 sm:p-10 rounded-xl shadow-2xl w-full max-w-lg md:max-w-xl">
+        
+        <!-- 1. Name Input Screen -->
+        <section id="name-screen" class="text-center">
+            <h1 class="text-3xl font-bold mb-4 text-gray-800">🥋 Taekwondo Mastery Quiz</h1>
+            <p class="mb-6 text-gray-600">Test your knowledge on history, tenets, and Korean terminology. Enter your name to begin!</p>
+            
+            <input type="text" id="user-name" placeholder="Your Full Name" maxlength="50" 
+                   class="w-full p-3 mb-6 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            
+            <button id="start-quiz-button" class="w-full py-3 text-white tkd-blue font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+                Start Quiz
+            </button>
+        </section>
+
+        <!-- 2. Quiz Screen -->
+        <section id="quiz-screen" class="hidden">
+            <div id="quiz-header" class="flex justify-between items-center mb-6 pb-3 border-b border-gray-200">
+                <span id="timer" class="text-xl font-bold tkd-red px-3 py-1 text-white rounded-full">⏱ 05:00</span>
+                <span id="question-counter" class="text-lg font-semibold text-gray-700">Question 1/15</span>
+            </div>
+            
+            <h2 id="question-text" class="text-xl font-medium mb-6 text-left text-gray-800">Question loading...</h2>
+            
+            <div id="options-container" class="space-y-3">
+                <!-- Options will be injected here by JavaScript -->
+            </div>
+            
+            <div id="feedback-container" class="hidden mt-6 p-4 rounded-lg font-medium text-left">
+                <!-- Instant feedback will be displayed here -->
+            </div>
+
+            <div id="controls" class="flex justify-between mt-8 space-x-4">
+                <button id="skip-button" onclick="skipQuestion()" 
+                        class="flex-1 py-3 text-gray-800 tkd-fail font-semibold rounded-lg hover:bg-yellow-500 transition duration-150 shadow-md">
+                    Skip
+                </button>
+                <button id="next-button" class="hidden flex-1 py-3 text-white tkd-pass font-semibold rounded-lg hover:bg-green-700 transition duration-150 shadow-md" onclick="nextQuestion()">
+                    Next &rarr;
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. Results Screen -->
+        <section id="results-screen" class="hidden text-center">
+            <h1 id="results-title" class="text-3xl font-extrabold mb-4 text-gray-800">Quiz Finished!</h1>
+            <h2 id="user-results-name" class="text-xl text-gray-600 mb-6"></h2>
+            
+            <div id="score-summary" class="mx-auto max-w-xs p-6 bg-gray-100 rounded-xl shadow-inner space-y-2">
+                <p class="text-2xl font-semibold text-gray-700">Score:</p>
+                <p class="text-4xl font-extrabold tkd-blue text-white inline-block px-4 py-1 rounded-full shadow-lg">
+                    <span id="percent-score">0%</span>
+                </p>
+                <p class="text-lg text-gray-700 pt-2">Correct: <span id="correct-count" class="font-bold">0</span> / 15</p>
+            </div>
+            
+            <div id="result-message-container" class="mt-8 p-4 text-lg font-semibold rounded-lg">
+                <!-- Personalized message will appear here -->
+            </div>
+            
+            <button onclick="window.location.reload()" class="w-full mt-6 py-3 text-white tkd-blue font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+                Take Quiz Again
+            </button>
+        </section>
+
+    </main>
+
+    <script>
+// --- 1. QUESTION DATA POOL (100+ Questions) ---
+const allQuestions = [
+    // --- History (20+ Questions) ---
+    {
+        category: 'history',
+        question: "The earliest records of Korean Martial Arts, known as 'Taek Kyon', date back to approximately which period?",
+        options: ["1392 A.D.", "50 B.C.", "936 A.D.", "1955 A.D."],
+        answer: "50 B.C."
+    },
+    {
+        category: 'history',
+        question: "What was the name of the elite youth group whose honor-code heavily influenced modern Taekwondo philosophy?",
+        options: ["Hwarang-gwan", "Hwa Rang Do", "Koryo Do", "Silla Hwarang"],
+        answer: "Hwa Rang Do"
+    },
+    {
+        category: 'history',
+        question: "In what year did Taekwondo make its debut as an official Olympic sport (full medal competition)?",
+        options: ["1988 Seoul", "1992 Barcelona", "2000 Sydney", "2004 Athens"],
+        answer: "2000 Sydney"
+    },
+    {
+        category: 'history',
+        question: "The five original Korean Kwans (schools) unified in 1955 under which initial name?",
+        options: ["Tae Kwon Do", "Kong Soo Do", "Tae Soo Do", "Kwan Bo"],
+        answer: "Tae Soo Do"
+    },
+    {
+        category: 'history',
+        question: "Which of the three ancient Korean Kingdoms was Taek Kyon most prominent in, as suggested by tomb murals?",
+        options: ["Paekje", "Gaya", "Silla", "Koguryo"],
+        answer: "Koguryo"
+    },
+    {
+        category: 'history',
+        question: "What year did the name 'Tae Kwon Do' become officially adopted by a majority of Korean Martial Arts masters?",
+        options: ["1955", "1957", "1961", "1963"],
+        answer: "1957"
+    },
+    {
+        category: 'history',
+        question: "The WTF (World Taekwondo Federation) was founded in which year?",
+        options: ["1966", "1973", "1980", "1990"],
+        answer: "1973"
+    },
+    {
+        category: 'history',
+        question: "Who is credited with introducing Taekwondo to Nigeria in the year 1975?",
+        options: ["George Ashiru", "Gm Moo Cheon Kim", "Aikpa Aime", "Emmanuel Ikpeme"],
+        answer: "Aikpa Aime"
+    },
+    {
+        category: 'history',
+        question: "In what year was the Nigerian Taekwondo Federation (NTF) officially recognized by the Federal Government and the WTF?",
+        options: ["1975", "1981", "1987", "2003"],
+        answer: "1987"
+    },
+    {
+        category: 'history',
+        question: "The WTF changed its name to World Taekwondo (WT) primarily to avoid confusion with the acronym for which organization?",
+        options: ["World Tennis", "World Trade", "World Taekwondo Alliance", "World Treaty"],
+        answer: "World Trade"
+    },
+    {
+        category: 'history',
+        question: "What does the 'Tae' (태) in Taekwondo literally mean?",
+        options: ["Hand", "Foot or Stomp", "Spirit", "Way of Life"],
+        answer: "Foot or Stomp"
+    },
+    {
+        category: 'history',
+        question: "What does the 'Kwon' (권) in Taekwondo literally mean?",
+        options: ["Hand or Fist", "Foot or Stomp", "Spirit", "Way of Life"],
+        answer: "Hand or Fist"
+    },
+    {
+        category: 'history',
+        question: "What does the 'Do' (도) in Taekwondo literally mean?",
+        options: ["Discipline", "Technique", "Power", "Art or Way of Life"],
+        answer: "Art or Way of Life"
+    },
+    {
+        category: 'history',
+        question: "Which Nigerian Grandmaster was one of the first inducted into the Official Taekwondo Hall of Fame in Seoul, South Korea (mentioned in the handout)?",
+        options: ["Chika Chukwumerije", "George Ashiru", "Dominic Bassey", "Bili Sule"],
+        answer: "George Ashiru"
+    },
+    {
+        category: 'history',
+        question: "In which year did the Korean Taekwondo Union (KTU) change its name to the Korean Taekwondo Association (KTA)?",
+        options: ["1961", "1965", "1973", "1980"],
+        answer: "1965"
+    },
+    {
+        category: 'history',
+        question: "The two main styles of Taekwondo are the WTF/WT style and which other style?",
+        options: ["Kukkiwon", "Moo Duk Kwan", "International Taekwondo Federation (ITF)", "Chung Do Kwan"],
+        answer: "International Taekwondo Federation (ITF)"
+    },
+    {
+        category: 'history',
+        question: "In what year did Taekwondo get featured at the National Sports Festival held in Kwara State, Nigeria?",
+        options: ["1981", "1983", "1985", "1987"],
+        answer: "1985"
+    },
+    {
+        category: 'history',
+        question: "Which Kwan was established in Western Nigeria with Mr. Deola Kumpayi as the pioneer?",
+        options: ["Jidokwan", "Moo Duk Kwan", "Chung Do Kwan", "Kukkiwon"],
+        answer: "Chung Do Kwan"
+    },
+    {
+        category: 'history',
+        question: "Aikpa Aime, the introducer of TKD to Nigeria, was a formal student of which pioneer Korean coach in Africa?",
+        options: ["Gen. Choi Hong Hi", "Gm Moo Cheon Kim", "Gm Kim Yong Tae", "Gm Park"],
+        answer: "Gm Kim Yong Tae"
+    },
+    {
+        category: 'history',
+        question: "The philosophical background of modern Taekwondo is strongly influenced by the honor code of which ancient Korean group?",
+        options: ["Samurang", "Silla Hwarang", "Koryo Do", "Sambo"],
+        answer: "Silla Hwarang"
+    },
+    // --- Tenets & Commandments (20+ Questions) ---
+    {
+        category: 'tenets',
+        question: "Which Tenet of Taekwondo is defined as: 'To be courageous in the face of adversity, and impossible to subdue'?",
+        options: ["Perseverance", "Humility", "Self Control", "Indomitable Spirit"],
+        answer: "Indomitable Spirit"
+    },
+    {
+        category: 'tenets',
+        question: "A serious student must learn not to be impatient, but to continue steadfastly. Which Tenet is this describing?",
+        options: ["Modesty", "Perseverance", "Self-control", "Humility"],
+        answer: "Perseverance"
+    },
+    {
+        category: 'tenets',
+        question: "Which of the following is NOT a traditional Tenet of Taekwondo?",
+        options: ["Modesty", "Respect", "Perseverance", "Self Control"],
+        answer: "Respect"
+    },
+    {
+        category: 'tenets',
+        question: "The Tenet related to maintaining discipline both inside and outside the Dojang is:",
+        options: ["Courtesy", "Integrity", "Self Control", "Humility"],
+        answer: "Self Control"
+    },
+    {
+        category: 'tenets',
+        question: "What is the second line of the Taekwondo Pledge?",
+        options: ["I shall observe the tenets of Taekwondo.", "I shall respect instructors and seniors.", "I shall never misuse Taekwondo.", "I shall be a champion of freedom and justice."],
+        answer: "I shall respect instructors and seniors."
+    },
+    {
+        category: 'tenets',
+        question: "The Taekwondo pledge ends with the commitment: 'I shall build a more ______ world.'",
+        options: ["peaceful", "just", "powerful", "unified"],
+        answer: "peaceful"
+    },
+    {
+        category: 'tenets',
+        question: "Which Tenet emphasizes being polite, showing respect, and being considerate to others?",
+        options: ["Perseverance", "Integrity", "Courtesy", "Indomitable Spirit"],
+        answer: "Courtesy"
+    },
+    {
+        category: 'tenets',
+        question: "Which Tenet encourages students to be truthful, honest, and maintain a sense of justice?",
+        options: ["Modesty", "Integrity", "Self Control", "Courtesy"],
+        answer: "Integrity"
+    },
+    {
+        category: 'tenets',
+        question: "The phrase 'Never retreat from a battle' relates to which Taekwondo tenet or commandment?",
+        options: ["Courtesy", "Integrity", "Indomitable Spirit", "Perseverance"],
+        answer: "Indomitable Spirit"
+    },
+    {
+        category: 'tenets',
+        question: "The commandment 'Serve your parents with filial piety' reflects the influence of the honor code of which ancient group?",
+        options: ["The Samurang", "The Hwa Rang Do", "The Koryo", "The Shogun"],
+        answer: "The Hwa Rang Do"
+    },
+    {
+        category: 'tenets',
+        question: "Which commandment of modern Taekwondo states that one should 'Finish what you started'?",
+        options: ["Respect your teacher", "Loyalty to your school", "Always demonstrate indomitable spirit", "Never take unjustly"],
+        answer: "Loyalty to your school"
+    },
+    {
+        category: 'tenets',
+        question: "The commitment 'I shall observe the tenets of Taekwondo' is which line of the Student Pledge?",
+        options: ["First", "Second", "Third", "Fourth"],
+        answer: "First"
+    },
+    {
+        category: 'tenets',
+        question: "What does the commandment 'Respect your elders' directly correlate with in terms of conduct in the Dojang?",
+        options: ["Taking breaks", "Bowing (Kyung Nae)", "Kicking high", "Holding eye contact"],
+        answer: "Bowing (Kyung Nae)"
+    },
+    {
+        category: 'tenets',
+        question: "What does the Tenet 'Humility' emphasize in a student?",
+        options: ["Showing off techniques", "Accepting praise graciously", "Acknowledging weaknesses", "Being boastful"],
+        answer: "Acknowledging weaknesses"
+    },
+    {
+        category: 'tenets',
+        question: "The ultimate goal of Taekwondo, beyond physical training, is related to the development of:",
+        options: ["Financial success", "Moral character", "Competitive spirit", "Physical strength"],
+        answer: "Moral character"
+    },
+    // --- Terminology: Stances (20+ Questions) ---
+    {
+        category: 'korean_terms_stances',
+        question: "What is the Korean term for a **Walking Stance**?",
+        options: ["Ap Koo Bi", "Dwitkoobi", "Joochoom Seogi", "Ap Seogi"],
+        answer: "Ap Seogi"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "What is the Korean term for a **Horse Riding Stance**?",
+        options: ["Moa Seogi", "Joochoom Seogi", "Beom Seogi", "Hakdari Seogi"],
+        answer: "Joochoom Seogi"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "The Korean term for a **Front Stance (Long Stance)** is:",
+        options: ["Dwitkoobi", "Ap Koo Bi", "Moa Seogi", "Ap Seogi"],
+        answer: "Ap Koo Bi"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "The Korean term for a **Back Stance** is:",
+        options: ["Dwitkoobi", "Ap Koo Bi", "Beom Seogi", "Joochoom Seogi"],
+        answer: "Dwitkoobi"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "What is the term for a **Closed Stance** where the feet are together?",
+        options: ["Moa Seogi", "Naranhi Seogi", "Go Jun Seogi", "Charyot Seogi"],
+        answer: "Moa Seogi"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "What is the Korean term for a **Fighting Stance** (used in sparring)?",
+        options: ["Gyeorugi Seogi", "Kyong Ye Seogi", "Jhoonbi Seogi", "Gyeorugi Jase"],
+        answer: "Gyeorugi Seogi"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "The Korean term for **Attention Stance** is:",
+        options: ["Jhoonbi", "Kyong Ye", "Cha Ryot", "Moa Seogi"],
+        answer: "Cha Ryot"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "What is the term for the **Ready Stance** typically used before a form?",
+        options: ["Kyung Nae", "Cha Ryot", "Jhoon-Bi", "Shi-Jack"],
+        answer: "Jhoon-Bi"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "In Ap Koo Bi (Front Stance), what is the general weight distribution (front:back)?",
+        options: ["70:30", "50:50", "90:10", "60:40"],
+        answer: "60:40"
+    },
+    {
+        category: 'korean_terms_stances',
+        question: "In Dwitkoobi (Back Stance), what is the general weight distribution (front:back)?",
+        options: ["50:50", "30:70", "10:90", "25:75"],
+        answer: "30:70"
+    },
+    // --- Terminology: Blocks/Strikes (20+ Questions) ---
+    {
+        category: 'korean_terms_techniques',
+        question: "What is the Korean term for a **Down / Low Block**?",
+        options: ["Eulgool Makki", "Momtong Makki", "Arae Makki", "Sonnal Makki"],
+        answer: "Arae Makki"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "What is the Korean term for a **Middle Block** (or body block)?",
+        options: ["Momtong Makki", "Arae Makki", "Eulgool Makki", "Gyeorugi Makki"],
+        answer: "Momtong Makki"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "What is the Korean term for a **High Block** (or face block)?",
+        options: ["Arae Makki", "Momtong Makki", "Eulgool Makki", "Sonnal Makki"],
+        answer: "Eulgool Makki"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "What is the Korean term for a **Knife Hand Block**?",
+        options: ["Sonnal Makki", "Palmok Makki", "Batang Son Makki", "Hansonnal Makki"],
+        answer: "Sonnal Makki"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "What is the Korean term for a **Punch**?",
+        options: ["Chagi", "Jireugi", "Makki", "Chigi"],
+        answer: "Jireugi"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "What is the Korean term for a **Kick**?",
+        options: ["Chagi", "Jireugi", "Makki", "Chigi"],
+        answer: "Chagi"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "The **Axe Kick** is known in Korean as:",
+        options: ["Dollyo Chagi", "Yop Chagi", "Naeryeo Chagi", "Bandal Chagi"],
+        answer: "Naeryeo Chagi"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "The **Roundhouse Kick** is known in Korean as:",
+        options: ["Dollyo Chagi", "Yop Chagi", "Naeryeo Chagi", "Bandal Chagi"],
+        answer: "Dollyo Chagi"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "The **Side Kick** is known in Korean as:",
+        options: ["Dollyo Chagi", "Yop Chagi", "Naeryeo Chagi", "Bandal Chagi"],
+        answer: "Yop Chagi"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "The Korean term for **Elbow Strike** is:",
+        options: ["Palmok Chigi", "Palgup Chigi", "Mureup Chagi", "Me Jumeok"],
+        answer: "Palgup Chigi"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "The Korean term for the **Forearm** is:",
+        options: ["Pal Mok", "Jumeok", "Muri", "Sonnal"],
+        answer: "Pal Mok"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "The target area for **Momtong** techniques is the:",
+        options: ["Head/Face", "Torso/Body", "Lower body/Legs", "Arms/Hands"],
+        answer: "Torso/Body"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "The target area for **Arae** techniques is the:",
+        options: ["Head/Face", "Torso/Body", "Lower body/Legs", "Arms/Hands"],
+        answer: "Lower body/Legs"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "What is the Korean term for **Inner Forearm Block**?",
+        options: ["An Palmok Makki", "Bakat Palmok Makki", "Sonnal Deabi", "Batang Son Makki"],
+        answer: "An Palmok Makki"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "What part of the foot is typically used for a **Front Snap Kick (Ap Chagi)**?",
+        options: ["Heel", "Ball of the Foot (Ap Chuk)", "Instep", "Outer Blade (Balnal)"],
+        answer: "Ball of the Foot (Ap Chuk)"
+    },
+    {
+        category: 'korean_terms_techniques',
+        question: "What is the Korean term for **Breaking** (as in board breaking)?",
+        options: ["Poomsae", "Kyukpa", "Gyeorugi", "Shi-Jack"],
+        answer: "Kyukpa"
+    },
+    // --- Terminology: Commands/Dojang (20+ Questions) ---
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean command for **'Attention'**?",
+        options: ["Kyung Nae", "Jhoon-Bi", "Cha Ryot", "Shi Jack"],
+        answer: "Cha Ryot"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean command for **'Bow'**?",
+        options: ["Kyung Nae", "Cha Ryot", "Baro", "Guman"],
+        answer: "Kyung Nae"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean term for **'Sparring'**?",
+        options: ["Poomsae", "Kyukpa", "Hol Shin Sul", "Gyeorugi"],
+        answer: "Gyeorugi"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean term for your **Uniform**?",
+        options: ["Do Jang", "Do Bak", "Kwan", "Dojang-bok"],
+        answer: "Do Bak"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean term for the **Training Hall or School**?",
+        options: ["Do Bak", "Kwan", "Dojang", "Hapkido"],
+        answer: "Dojang"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean command for **'Begin'** (Start)?",
+        options: ["Guman", "Shi-Jack", "Hae San", "Baro"],
+        answer: "Shi-Jack"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean command for **'Stop'**?",
+        options: ["Guman", "Shi-Jack", "Hae San", "Baro"],
+        answer: "Guman"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "The Korean term for a **Form or Pattern** is:",
+        options: ["Kyukpa", "Gyeorugi", "Poomsae", "Dan"],
+        answer: "Poomsae"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean term for **Self-Defense**?",
+        options: ["Poomsae", "Kyukpa", "Hol Shin Sul", "Gyeorugi"],
+        answer: "Hol Shin Sul"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What does the term **Sun Bae** (or Seonbae) signify in the Dojang?",
+        options: ["Junior Student", "Master", "Senior Student", "Instructor"],
+        answer: "Senior Student"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What does the term **Hu Bae** (or Hubae) signify in the Dojang?",
+        options: ["Junior Student", "Master", "Senior Student", "Instructor"],
+        answer: "Junior Student"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "The correct way to address a 4th Dan and above is typically:",
+        options: ["Sabeom-nim (Master)", "Kyo Sa Nim (Instructor)", "Jaeja (Student)", "Kwansah (Director)"],
+        answer: "Sabeom-nim (Master)"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the correct command for **'At Ease'** or **'Relax'**?",
+        options: ["Baro", "Shi-Jack", "Swi-eo", "Hae San"],
+        answer: "Swi-eo"
+    },
+    {
+        category: 'korean_terms_dojang',
+        question: "What is the Korean term for **Turn Around**?",
+        options: ["Dwiro Tora", "Dwitkoobi", "Baro", "Guman"],
+        answer: "Dwiro Tora"
+    },
+    // --- Belts & Counting (20+ Questions) ---
+    {
+        category: 'belts_counting',
+        question: "What is the Korean term for the colored belt grades (below black belt)?",
+        options: ["Dan", "Pum", "Gup / Kup", "Sabeom"],
+        answer: "Gup / Kup"
+    },
+    {
+        category: 'belts_counting',
+        question: "What is the Korean term for the Black Belt degrees?",
+        options: ["Gup / Kup", "Pum", "Dan", "Sabeom"],
+        answer: "Dan"
+    },
+    {
+        category: 'belts_counting',
+        question: "What is the term used to signify a higher level of mastery for students who are **15 or under** (junior black belt)?",
+        options: ["Dan", "Kup", "Pum", "Gup"],
+        answer: "Pum"
+    },
+    {
+        category: 'belts_counting',
+        question: "What does the **Yellow belt** signify in the grading system?",
+        options: ["Heaven, towards which the plant matures.", "Innocence, as that of the beginning student.", "Danger, cautioning the student to exercise control.", "Earth, from which a plant sprouts and takes root."],
+        answer: "Earth, from which a plant sprouts and takes root."
+    },
+    {
+        category: 'belts_counting',
+        question: "What does the **Blue belt** typically symbolize in the grading system?",
+        options: ["The Heaven/Sky, toward which the plant is growing.", "Innocence", "Danger", "The sun"],
+        answer: "The Heaven/Sky, toward which the plant is growing."
+    },
+    {
+        category: 'belts_counting',
+        question: "What does the **Red belt** typically symbolize in the grading system?",
+        options: ["Innocence", "Purity", "Danger, cautioning the student to exercise control", "The Earth"],
+        answer: "Danger, cautioning the student to exercise control"
+    },
+    {
+        category: 'belts_counting',
+        question: "What is the Korean term for the number **One** (Hana/Il)?",
+        options: ["Hana (Hanah)", "Set (Seht)", "Da Seot", "Yeo Seot"],
+        answer: "Hana (Hanah)"
+    },
+    {
+        category: 'belts_counting',
+        question: "What is the Korean term for the number **Three** (Set/Sam)?",
+        options: ["Hana", "Dul", "Set", "Net"],
+        answer: "Set"
+    },
+    {
+        category: 'belts_counting',
+        question: "What is the Korean term for the number **Five** (Da Seot/Oh)?",
+        options: ["Set", "Net", "Da Seot", "Yeo Seot"],
+        answer: "Da Seot"
+    },
+    {
+        category: 'belts_counting',
+        question: "What is the Korean term for the number **Ten** (Yeol/Sip)?",
+        options: ["Ah Hop", "Yeol", "Il Gob", "Yeo Deol"],
+        answer: "Yeol"
+    },
+    {
+        category: 'belts_counting',
+        question: "In Poomsae, what is the significance of the final **Kihap** (yell)?",
+        options: ["To signal the end of the form", "To intimidate the opponent", "To focus mental and physical energy", "To demonstrate breathing technique"],
+        answer: "To focus mental and physical energy"
+    },
+    {
+        category: 'belts_counting',
+        question: "What is the general meaning of the **White belt**?",
+        options: ["Purity, innocence, and lack of knowledge", "Skill and expertise", "Danger and caution", "Growth and development"],
+        answer: "Purity, innocence, and lack of knowledge"
+    },
+    // --- Miscellaneous (10+ Questions) ---
+    {
+        category: 'miscellaneous',
+        question: "What is the name of the organization that serves as the governing body for WT Taekwondo competitions (including the Olympics)?",
+        options: ["ITF", "KTA", "Kukkiwon", "World Taekwondo (WT)"],
+        answer: "World Taekwondo (WT)"
+    },
+    {
+        category: 'miscellaneous',
+        question: "The **Kukkiwon** (World Taekwondo Headquarters) is located in which city?",
+        options: ["Busan", "Pyongyang", "Seoul", "Incheon"],
+        answer: "Seoul"
+    },
+    {
+        category: 'miscellaneous',
+        question: "What does a serious student who plans to miss classes for a week or more usually need to do, according to the provided school rules?",
+        options: ["Pay an extra fee", "Complete extra homework", "Notify their instructor earlier", "Attend a makeup class"],
+        answer: "Notify their instructor earlier"
+    },
+    {
+        category: 'miscellaneous',
+        question: "What mandatory health and safety rule applies to fingernails and toenails?",
+        options: ["They must be long for defense", "They should be painted red", "They should be kept short to prevent injury", "They must be covered by gloves/socks"],
+        answer: "They should be kept short to prevent injury"
+    },
+    {
+        category: 'miscellaneous',
+        question: "When seated on the floor in the Dojang, what is the proper posture mentioned in the school rules?",
+        options: ["Legs crossed", "Knees extended and hands on the floor", "Knees tucked in and hands on the knee", "Lying down"],
+        answer: "Knees tucked in and hands on the knee"
+    },
+    {
+        category: 'miscellaneous',
+        question: "What common accessory must students remove before entering the Dojang for practice?",
+        options: ["Their Do Bak", "Their belt", "All jewelries", "Their shoes"],
+        answer: "All jewelries"
+    },
+    {
+        category: 'miscellaneous',
+        question: "The four parts of Taekwondo practice mentioned in the document include Poomsae, Gyeorugi, Kyukpa, and what other part?",
+        options: ["Meditating", "Hoshinsul (Self-Defense)", "Weapons Training", "Sparring"],
+        answer: "Hoshinsul (Self-Defense)"
+    },
+    {
+        category: 'miscellaneous',
+        question: "The term used for the **Master Instructor** or Grandmaster (often 7th Dan and above) is:",
+        options: ["Seonbae", "Sabeom-nim", "Kyo Sa Nim", "Gwanjang-nim"],
+        answer: "Gwanjang-nim"
+    },
+    {
+        category: 'miscellaneous',
+        question: "What is the Korean term for **Target** or **Aim**?",
+        options: ["Gong-gyeo", "Pyojeok", "Moa", "Hae San"],
+        answer: "Pyojeok"
+    },
+    {
+        category: 'miscellaneous',
+        question: "In which year did Taekwondo become officially recognized by the International Olympic Committee (IOC)?",
+        options: ["1973", "1980", "1988", "2000"],
+        answer: "1980"
+    },
+];
+
+// --- 2. GLOBAL STATE AND CONSTANTS ---
+const QUIZ_LENGTH = 15; // User takes 15 questions per session
+const QUIZ_TIMEOUT = 5 * 60; // 5 minutes in seconds
+const PASS_MARK = 0.80; // 80%
+
+let userName = '';
+let selectedQuestions = [];
+let currentQuestionIndex = 0;
+let correctAnswers = 0;
+let timeLeft = QUIZ_TIMEOUT;
+let timerInterval;
+
+// DOM Element Variables (Initialized later in the safe 'initialize' function)
+let nameScreen, quizScreen, resultsScreen, timerDisplay, counterDisplay, questionText, optionsContainer, feedbackContainer, skipButton, nextButton;
+
+
+// --- 3. HELPER FUNCTIONS ---
+
+/**
+ * Shuffles an array in place using the Fisher-Yates (Knuth) algorithm.
+ * @param {Array} array - The array to shuffle.
+ */
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+/**
+ * Selects 15 questions, ensuring a diverse range of topics is covered.
+ * This is crucial since the question pool is now over 100.
+ */
+function initializeQuestionPool() {
+    selectedQuestions = [];
+    const categories = ['history', 'tenets', 'korean_terms_stances', 'korean_terms_techniques', 'korean_terms_dojang', 'belts_counting', 'miscellaneous'];
+    
+    let allQCopy = [...allQuestions];
+    shuffleArray(allQCopy);
+
+    // 1. Prioritize selecting 1 question from each main category (for diversity)
+    const questionsByCategory = allQuestions.reduce((acc, q) => {
+        if (!acc[q.category]) acc[q.category] = [];
+        acc[q.category].push(q);
+        return acc;
+    }, {});
+
+    const usedQuestions = new Set();
+    
+    // Select one question from each existing category
+    categories.forEach(cat => {
+        if (questionsByCategory[cat] && questionsByCategory[cat].length > 0) {
+            shuffleArray(questionsByCategory[cat]);
+            const q = questionsByCategory[cat].pop();
+            selectedQuestions.push(q);
+            usedQuestions.add(q);
+        }
+    });
+    
+    // 2. Fill the remaining spots with random unused questions
+    let remainingPool = allQuestions.filter(q => !usedQuestions.has(q));
+    shuffleArray(remainingPool);
+
+    let requiredFiller = QUIZ_LENGTH - selectedQuestions.length;
+    for (let i = 0; i < requiredFiller && i < remainingPool.length; i++) {
+        selectedQuestions.push(remainingPool[i]);
+    }
+    
+    // Final shuffle of the selected quiz questions to randomize order
+    shuffleArray(selectedQuestions);
+
+    // For each question, shuffle its options
+    selectedQuestions.forEach(q => shuffleArray(q.options));
+}
+
+// --- 4. QUIZ FLOW LOGIC ---
+
+/**
+ * Step 1: Get name and transition to quiz initialization.
+ */
+function startQuizInitialization() {
+    // We use document.getElementById here, which is now safe because of DOMContentLoaded.
+    const nameInput = document.getElementById('user-name').value.trim();
+    if (nameInput) {
+        userName = nameInput;
+        // Use custom modal instead of alert
+        nameScreen.classList.add('hidden');
+        quizScreen.classList.remove('hidden');
+        initializeQuiz();
+    } else {
+        showCustomAlert("Please enter your name to begin the quiz.");
+    }
+}
+
+/**
+ * Step 2: Initialize the quiz state and start timer.
+ */
+function initializeQuiz() {
+    initializeQuestionPool();
+    currentQuestionIndex = 0;
+    correctAnswers = 0;
+    timeLeft = QUIZ_TIMEOUT;
+    displayQuestion();
+    startTimer();
+}
+
+/**
+ * Starts the 5-minute countdown timer.
+ */
+function startTimer() {
+    clearInterval(timerInterval); // Clear any existing timer
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const seconds = (timeLeft % 60).toString().padStart(2, '0');
+        timerDisplay.textContent = `⏱ ${minutes}:${seconds}`;
+
+        if (timeLeft <= 30 && timeLeft > 0) {
+            timerDisplay.classList.add('animate-pulse');
+        } else {
+             timerDisplay.classList.remove('animate-pulse');
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            endQuiz(true); // true for timeout
+        }
+    }, 1000);
+}
+
+/**
+ * Displays the current question and its options.
+ */
+function displayQuestion() {
+    if (currentQuestionIndex >= QUIZ_LENGTH || currentQuestionIndex >= selectedQuestions.length) {
+        endQuiz(false); // false for completed
+        return;
+    }
+
+    const currentQ = selectedQuestions[currentQuestionIndex];
+
+    // Reset controls/feedback
+    feedbackContainer.classList.add('hidden');
+    feedbackContainer.innerHTML = '';
+    skipButton.classList.remove('hidden');
+    nextButton.classList.add('hidden');
+    
+    // Clear any previous color classes from buttons
+    optionsContainer.innerHTML = ''; 
+
+    // Update Question Counter
+    counterDisplay.textContent = `Question ${currentQuestionIndex + 1}/${QUIZ_LENGTH}`;
+    
+    // Update Question Text
+    questionText.innerHTML = `${currentQ.question}`;
+    
+    // Update Options
+    currentQ.options.forEach(option => {
+        const button = document.createElement('button');
+        button.className = 'option-button w-full p-4 border border-gray-300 rounded-lg text-left';
+        button.textContent = option;
+        button.onclick = () => checkAnswer(button, option);
+        optionsContainer.appendChild(button);
+    });
+}
+
+/**
+ * Checks the selected answer and provides instant feedback.
+ * @param {HTMLElement} selectedButton - The button element clicked by the user.
+ * @param {string} selectedAnswer - The text of the selected option.
+ */
+function checkAnswer(selectedButton, selectedAnswer) {
+    const currentQ = selectedQuestions[currentQuestionIndex];
+    const isCorrect = (selectedAnswer === currentQ.answer);
+
+    // Disable all options after selection
+    optionsContainer.querySelectorAll('.option-button').forEach(opt => {
+        opt.classList.add('disabled');
+        // Highlight the correct answer
+        if (opt.textContent === currentQ.answer) {
+            opt.classList.add('correct');
+        }
+    });
+
+    // Provide instant feedback
+    feedbackContainer.classList.remove('hidden');
+    skipButton.classList.add('hidden');
+    nextButton.classList.remove('hidden');
+
+    if (isCorrect) {
+        correctAnswers++;
+        selectedButton.classList.add('correct');
+        feedbackContainer.className = 'feedback correct mt-6 p-4 rounded-lg font-medium text-left';
+        feedbackContainer.innerHTML = `✅ **Correct!** Great job.`;
+    } else {
+        selectedButton.classList.add('incorrect');
+        feedbackContainer.className = 'feedback incorrect mt-6 p-4 rounded-lg font-medium text-left';
+        feedbackContainer.innerHTML = `❌ **Incorrect.** The correct answer was **${currentQ.answer}**.`;
+    }
+
+    // Mark question as answered (for nextQuestion to work)
+    currentQ.answered = true;
+}
+
+/**
+ * Skips the current question without answering.
+ */
+function skipQuestion() {
+    const currentQ = selectedQuestions[currentQuestionIndex];
+    currentQ.answered = true;
+    currentQ.skipped = true;
+    nextQuestion();
+}
+
+/**
+ * Moves to the next question or ends the quiz.
+ */
+function nextQuestion() {
+    currentQuestionIndex++;
+    if (currentQuestionIndex < QUIZ_LENGTH) {
+        displayQuestion();
+    } else {
+        endQuiz(false); // Quiz completed
+    }
+}
+
+/**
+ * Ends the quiz, stops the timer, and shows results.
+ * @param {boolean} isTimeout - True if the quiz ended due to timeout.
+ */
+function endQuiz(isTimeout) {
+    clearInterval(timerInterval);
+    quizScreen.classList.add('hidden');
+    resultsScreen.classList.remove('hidden');
+
+    const score = correctAnswers;
+    const totalQuestions = QUIZ_LENGTH;
+    const percentage = Math.round((score / totalQuestions) * 100);
+    const passed = percentage >= (PASS_MARK * 100);
+
+    // Update Results Summary
+    document.getElementById('correct-count').textContent = score;
+    document.getElementById('percent-score').textContent = `${percentage}%`;
+    document.getElementById('user-results-name').textContent = `Hi ${userName}, here are your results:`;
+    document.getElementById('results-title').textContent = isTimeout ? "Time's Up!" : "Quiz Finished!";
+
+    // Generate Personalized Message and Emojis
+    let message = '';
+    const messageContainer = document.getElementById('result-message-container');
+    messageContainer.classList.remove('tkd-pass', 'tkd-fail', 'tkd-red');
+
+    if (percentage === 100) {
+        message = "Perfect Score! 💯🏆 You are a true Taekwondo Master. Exceptional knowledge!";
+        messageContainer.classList.add('tkd-pass', 'text-white');
+    } else if (passed) {
+        message = `Congratulations, ${userName}! 🎉 You passed the quiz with an excellent score.`;
+        messageContainer.classList.add('tkd-pass', 'text-white');
+    } else if (percentage >= 60) {
+        message = `Good effort! You're making progress. Review the history and terminology section to secure that pass!`;
+        messageContainer.classList.add('tkd-fail', 'text-gray-800');
+    } else {
+        message = `Keep revising, ${userName}! 📚 This shows you have a lot more work to do on the fundamentals. Focus on the core principles.`;
+        messageContainer.classList.add('tkd-red', 'text-white');
+    }
+
+    messageContainer.innerHTML = `<p>${message}</p>`;
+}
+
+/**
+ * Replaces the native alert() function with a custom modal.
+ * @param {string} message - The message to display.
+ */
+function showCustomAlert(message) {
+    // Simple custom alert implementation
+    const alertModal = document.createElement('div');
+    alertModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    alertModal.innerHTML = `
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full text-center">
+            <h3 class="text-xl font-bold text-red-600 mb-4">Warning</h3>
+            <p class="mb-6 text-gray-700">${message}</p>
+            <button class="w-full py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600" 
+                    onclick="document.body.removeChild(this.parentNode.parentNode)">
+                OK
+            </button>
+        </div>
+    `;
+    document.body.appendChild(alertModal);
+}
+
+// --- 5. INITIALIZATION (THE FIX) ---
+
+/**
+ * Fetches all DOM elements and assigns them to the global variables.
+ * Attaches the main event listener to the Start Quiz button.
+ * This runs ONLY after the entire HTML document is ready.
+ */
+function initialize() {
+    // 1. Assign all global DOM variables safely
+    nameScreen = document.getElementById('name-screen');
+    quizScreen = document.getElementById('quiz-screen');
+    resultsScreen = document.getElementById('results-screen');
+    timerDisplay = document.getElementById('timer');
+    counterDisplay = document.getElementById('question-counter');
+    questionText = document.getElementById('question-text');
+    optionsContainer = document.getElementById('options-container');
+    feedbackContainer = document.getElementById('feedback-container');
+    skipButton = document.getElementById('skip-button');
+    nextButton = document.getElementById('next-button');
+
+    // 2. Attach event listeners
+    // FIX: Attach the handler programmatically after DOM elements exist
+    const startButton = document.getElementById('start-quiz-button');
+    if (startButton) {
+        startButton.addEventListener('click', startQuizInitialization);
+    }
+}
+
+// 3. Run the initialization function only after the entire HTML document is ready
+document.addEventListener('DOMContentLoaded', initialize);
+
+// Expose other functions to the window object for use by other inline handlers (skip, next)
+window.skipQuestion = skipQuestion;
+window.nextQuestion = nextQuestion;
+window.startQuizInitialization = startQuizInitialization; // Exposed in case the button uses inline or user prefers direct access
+window.showCustomAlert = showCustomAlert; // Expose custom alert
+    </script>
+</body>
+</html>
