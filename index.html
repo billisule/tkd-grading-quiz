@@ -7,10 +7,20 @@
     <!-- Use Tailwind CSS for modern, responsive styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f0f4f8; /* Light blue/gray background */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        main {
+            flex-grow: 1; /* Allows main content to fill space */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
         }
         .tkd-blue {
             background-color: #007bff; /* Deep Blue, like a Dan belt trim */
@@ -57,76 +67,123 @@
             background-color: #f8d7da;
             border-left: 5px solid #dc3545;
         }
+        /* Custom Modal Styling for Confirmation */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+        }
     </style>
 </head>
-<body class="p-4 sm:p-8 flex justify-center items-center min-h-screen">
+<body class="antialiased">
 
-    <main id="app-container" class="bg-white p-6 sm:p-10 rounded-xl shadow-2xl w-full max-w-lg md:max-w-xl">
-        
-        <!-- 1. Name Input Screen -->
-        <section id="name-screen" class="text-center">
-            <h1 class="text-3xl font-bold mb-4 text-gray-800">🥋 Taekwondo Mastery Quiz</h1>
-            <p class="mb-6 text-gray-600">Test your knowledge on history, tenets, and Korean terminology. Enter your name to begin!</p>
-            
-            <input type="text" id="user-name" placeholder="Your Full Name" maxlength="50" 
-                   class="w-full p-3 mb-6 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            
-            <button id="start-quiz-button" class="w-full py-3 text-white tkd-blue font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
-                Start Quiz
-            </button>
-        </section>
+    <!-- Header with Logo -->
+    <header class="p-4 bg-white shadow-md w-full">
+        <div class="container mx-auto flex items-center justify-start max-w-lg md:max-w-xl">
+            <!-- Logo with placeholder fallback -->
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDLPCISc8BnLEX0s_BUM42t4jdhvUT_VILNw&s"
+                 alt="ESD Martial Arts Academy Logo"
+                 class="h-10 w-auto mr-3 rounded-full border-2 border-red-500 shadow-md"
+                 onerror="this.onerror=null;this.src='https://placehold.co/40x40/f8f8f8/e00000?text=ESD';"
+            >
+            <h1 class="text-2xl font-extrabold text-gray-800">ESD Grading Test Prep</h1>
+        </div>
+    </header>
 
-        <!-- 2. Quiz Screen -->
-        <section id="quiz-screen" class="hidden">
-            <div id="quiz-header" class="flex justify-between items-center mb-6 pb-3 border-b border-gray-200">
-                <span id="timer" class="text-xl font-bold tkd-red px-3 py-1 text-white rounded-full">⏱ 05:00</span>
-                <span id="question-counter" class="text-lg font-semibold text-gray-700">Question 1/15</span>
-            </div>
+    <!-- Main Application Container -->
+    <main class="w-full">
+        <div id="app-container" class="bg-white p-6 sm:p-10 rounded-xl shadow-2xl w-full max-w-lg md:max-w-xl card">
             
-            <h2 id="question-text" class="text-xl font-medium mb-6 text-left text-gray-800">Question loading...</h2>
-            
-            <div id="options-container" class="space-y-3">
-                <!-- Options will be injected here by JavaScript -->
-            </div>
-            
-            <div id="feedback-container" class="hidden mt-6 p-4 rounded-lg font-medium text-left">
-                <!-- Instant feedback will be displayed here -->
-            </div>
-
-            <div id="controls" class="flex justify-between mt-8 space-x-4">
-                <button id="skip-button" onclick="skipQuestion()" 
-                        class="flex-1 py-3 text-gray-800 tkd-fail font-semibold rounded-lg hover:bg-yellow-500 transition duration-150 shadow-md">
-                    Skip
+            <!-- 1. Name Input Screen -->
+            <section id="name-screen" class="text-center">
+                <h1 class="text-3xl font-bold mb-4 text-gray-800">🥋 Taekwondo Knowledge Quiz</h1>
+                <p class="mb-6 text-gray-600">Test your knowledge on history, tenets, and Korean terminology. Enter your name to begin!</p>
+                
+                <input type="text" id="user-name" placeholder="Your Full Name" maxlength="50" 
+                       class="w-full p-3 mb-6 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                
+                <button id="start-quiz-button" class="w-full py-3 text-white tkd-blue font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+                    Start Quiz
                 </button>
-                <button id="next-button" class="hidden flex-1 py-3 text-white tkd-pass font-semibold rounded-lg hover:bg-green-700 transition duration-150 shadow-md" onclick="nextQuestion()">
-                    Next &rarr;
+            </section>
+
+            <!-- 2. Quiz Screen -->
+            <section id="quiz-screen" class="hidden">
+                <div class="flex justify-end mb-4">
+                    <!-- NEW EXIT BUTTON -->
+                    <button id="exit-quiz-button" onclick="showExitConfirmation()" 
+                            class="px-4 py-2 text-sm text-white tkd-red font-semibold rounded-lg hover:bg-red-700 transition duration-150 shadow-md">
+                        Exit Quiz
+                    </button>
+                </div>
+
+                <div id="quiz-header" class="flex justify-between items-center mb-6 pb-3 border-b border-gray-200">
+                    <span id="timer" class="text-xl font-bold tkd-red px-3 py-1 text-white rounded-full">⏱ 05:00</span>
+                    <span id="question-counter" class="text-lg font-semibold text-gray-700">Question 1/15</span>
+                </div>
+                
+                <h2 id="question-text" class="text-xl font-medium mb-6 text-left text-gray-800">Question loading...</h2>
+                
+                <div id="options-container" class="space-y-3">
+                    <!-- Options will be injected here by JavaScript -->
+                </div>
+                
+                <div id="feedback-container" class="hidden mt-6 p-4 rounded-lg font-medium text-left">
+                    <!-- Instant feedback will be displayed here -->
+                </div>
+
+                <div id="controls" class="flex justify-between mt-8 space-x-4">
+                    <button id="skip-button" onclick="skipQuestion()" 
+                            class="flex-1 py-3 text-gray-800 tkd-fail font-semibold rounded-lg hover:bg-yellow-500 transition duration-150 shadow-md">
+                        Skip
+                    </button>
+                    <button id="next-button" class="hidden flex-1 py-3 text-white tkd-pass font-semibold rounded-lg hover:bg-green-700 transition duration-150 shadow-md" onclick="nextQuestion()">
+                        Next &rarr;
+                    </button>
+                </div>
+            </section>
+
+            <!-- 3. Results Screen -->
+            <section id="results-screen" class="hidden text-center">
+                <h1 id="results-title" class="text-3xl font-extrabold mb-4 text-gray-800">Quiz Finished!</h1>
+                <h2 id="user-results-name" class="text-xl text-gray-600 mb-6"></h2>
+                
+                <div id="score-summary" class="mx-auto max-w-xs p-6 bg-gray-100 rounded-xl shadow-inner space-y-2">
+                    <p class="text-2xl font-semibold text-gray-700">Score:</p>
+                    <p class="text-4xl font-extrabold tkd-blue text-white inline-block px-4 py-1 rounded-full shadow-lg">
+                        <span id="percent-score">0%</span>
+                    </p>
+                    <p class="text-lg text-gray-700 pt-2">Correct: <span id="correct-count" class="font-bold">0</span> / 15</p>
+                </div>
+                
+                <div id="result-message-container" class="mt-8 p-4 text-lg font-semibold rounded-lg">
+                    <!-- Personalized message will appear here -->
+                </div>
+                
+                <button onclick="window.location.reload()" class="w-full mt-6 py-3 text-white tkd-blue font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+                    Take Quiz Again
                 </button>
-            </div>
-        </section>
-
-        <!-- 3. Results Screen -->
-        <section id="results-screen" class="hidden text-center">
-            <h1 id="results-title" class="text-3xl font-extrabold mb-4 text-gray-800">Quiz Finished!</h1>
-            <h2 id="user-results-name" class="text-xl text-gray-600 mb-6"></h2>
-            
-            <div id="score-summary" class="mx-auto max-w-xs p-6 bg-gray-100 rounded-xl shadow-inner space-y-2">
-                <p class="text-2xl font-semibold text-gray-700">Score:</p>
-                <p class="text-4xl font-extrabold tkd-blue text-white inline-block px-4 py-1 rounded-full shadow-lg">
-                    <span id="percent-score">0%</span>
-                </p>
-                <p class="text-lg text-gray-700 pt-2">Correct: <span id="correct-count" class="font-bold">0</span> / 15</p>
-            </div>
-            
-            <div id="result-message-container" class="mt-8 p-4 text-lg font-semibold rounded-lg">
-                <!-- Personalized message will appear here -->
-            </div>
-            
-            <button onclick="window.location.reload()" class="w-full mt-6 py-3 text-white tkd-blue font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
-                Take Quiz Again
-            </button>
-        </section>
-
+            </section>
+        </div>
     </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-100 text-gray-600 p-4 mt-auto w-full border-t border-gray-300">
+        <div class="container mx-auto text-center text-xs">
+            <p class="mb-1">© 2025 ESD Martial Arts Academy. All Rights Reserved.</p>
+            <p>
+                Built by Bili Sule - Powered by
+                <a href="https://www.algrowithm.com" target="_blank" class="text-blue-600 hover:text-blue-800 transition duration-300 font-medium">
+                    alGROWithm AI Services
+                </a>
+            </p>
+        </div>
+    </footer>
+
 
     <script>
 // --- 1. QUESTION DATA POOL (100+ Questions) ---
@@ -990,20 +1047,27 @@ function endQuiz(isTimeout) {
     messageContainer.innerHTML = `<p>${message}</p>`;
 }
 
+
+// --- 5. CUSTOM MODALS (Replaces alert() and confirm()) ---
+
 /**
  * Replaces the native alert() function with a custom modal.
  * @param {string} message - The message to display.
  */
 function showCustomAlert(message) {
-    // Simple custom alert implementation
     const alertModal = document.createElement('div');
-    alertModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    alertModal.id = 'custom-alert-modal';
+    alertModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-enter';
+    
+    // Use setTimeout to apply the active class for transition effect
+    setTimeout(() => alertModal.classList.add('modal-enter-active'), 10);
+
     alertModal.innerHTML = `
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full text-center">
             <h3 class="text-xl font-bold text-red-600 mb-4">Warning</h3>
             <p class="mb-6 text-gray-700">${message}</p>
-            <button class="w-full py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600" 
-                    onclick="document.body.removeChild(this.parentNode.parentNode)">
+            <button class="w-full py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition duration-150" 
+                    onclick="document.body.removeChild(document.getElementById('custom-alert-modal'))">
                 OK
             </button>
         </div>
@@ -1011,7 +1075,43 @@ function showCustomAlert(message) {
     document.body.appendChild(alertModal);
 }
 
-// --- 5. INITIALIZATION (THE FIX) ---
+/**
+ * NEW: Displays a custom confirmation modal for exiting the quiz.
+ */
+function showExitConfirmation() {
+    const confirmationModal = document.createElement('div');
+    confirmationModal.id = 'exit-confirmation-modal';
+    confirmationModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 modal-enter';
+    
+    // Use setTimeout to apply the active class for transition effect
+    setTimeout(() => confirmationModal.classList.add('modal-enter-active'), 10);
+
+    // Function to close the modal
+    const closeModal = () => document.body.removeChild(confirmationModal);
+
+    confirmationModal.innerHTML = `
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full text-center">
+            <h3 class="text-xl font-bold text-red-600 mb-4">Confirm Exit</h3>
+            <p class="mb-6 text-gray-700 font-semibold">
+                Are you sure you would like to end the quiz and lose your progress?
+            </p>
+            <div class="flex justify-between space-x-3">
+                <button class="flex-1 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400 transition duration-150" 
+                        onclick="window.nextQuestion = nextQuestion; window.skipQuestion = skipQuestion; document.body.removeChild(document.getElementById('exit-confirmation-modal'))">
+                    No, Continue Quiz
+                </button>
+                <button class="flex-1 py-2 tkd-red text-white font-semibold rounded-lg hover:bg-red-700 transition duration-150" 
+                        onclick="window.location.reload()">
+                    Yes, Exit & Lose Progress
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(confirmationModal);
+}
+
+
+// --- 6. INITIALIZATION ---
 
 /**
  * Fetches all DOM elements and assigns them to the global variables.
@@ -1032,7 +1132,6 @@ function initialize() {
     nextButton = document.getElementById('next-button');
 
     // 2. Attach event listeners
-    // FIX: Attach the handler programmatically after DOM elements exist
     const startButton = document.getElementById('start-quiz-button');
     if (startButton) {
         startButton.addEventListener('click', startQuizInitialization);
@@ -1042,11 +1141,12 @@ function initialize() {
 // 3. Run the initialization function only after the entire HTML document is ready
 document.addEventListener('DOMContentLoaded', initialize);
 
-// Expose other functions to the window object for use by other inline handlers (skip, next)
+// Expose functions to the window object for use by other inline handlers
 window.skipQuestion = skipQuestion;
 window.nextQuestion = nextQuestion;
-window.startQuizInitialization = startQuizInitialization; // Exposed in case the button uses inline or user prefers direct access
-window.showCustomAlert = showCustomAlert; // Expose custom alert
+window.startQuizInitialization = startQuizInitialization;
+window.showCustomAlert = showCustomAlert; 
+window.showExitConfirmation = showExitConfirmation; // NEW: Expose the confirmation function
     </script>
 </body>
 </html>
